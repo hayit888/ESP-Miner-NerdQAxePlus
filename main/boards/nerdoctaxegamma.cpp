@@ -27,7 +27,7 @@ NerdOctaxeGamma::NerdOctaxeGamma()
 
     m_initVoltageMillis = 0;
 
-    m_maxVin = 13.0;
+    m_maxVin = 14.0;
     m_minVin = 10.0;
 
 #ifdef NERDOCTAXEGAMMA
