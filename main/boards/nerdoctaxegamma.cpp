@@ -57,16 +57,16 @@ NerdOctaxeGamma::NerdOctaxeGamma()
         // TPS53667 configuration: 6 phases, 240A capability
         m_numPhases = 6;
         m_imax = 240; // Current hardware: 24.9kΩ → 240A max (40A per phase with 6 phases)
-        m_ifault = 235.0;
-        m_maxPin = 300.0; // ~300W output Typically
+        m_ifault = 300.0;
+        m_maxPin = 350.0; // ~350W output Typically
         m_minPin = 30.0;
         m_minCurrentA = 0.0f;
-        m_maxCurrentA = 25.0f;
+        m_maxCurrentA = 30.0f;
         m_tps = new TPS53667();
 
         // Extended frequency range for TPS53667 (6 phases, higher power capacity)
         m_asicFrequencies = {525, 550, 575, 600, 625, 650, 675, 700, 725, 750, 775, 800};
-        m_absMaxAsicFrequency = 850; // Absolute max for manual input (danger zone)
+        m_absMaxAsicFrequency = 1200; // Absolute max for manual input (danger zone)
 
         // Extended voltage range for TPS53667 (6 phases, higher current capacity)
         m_asicVoltages = {1120, 1130, 1140, 1150, 1160, 1170, 1180, 1190, 1200, 1210, 1220, 1230, 1240, 1250, 1260};
