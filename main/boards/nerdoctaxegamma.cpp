@@ -27,8 +27,8 @@ NerdOctaxeGamma::NerdOctaxeGamma()
 
     m_initVoltageMillis = 0;
 
-    m_maxVin = 14.0;
-    m_minVin = 10.0;
+    m_maxVin = 13.0;
+    m_minVin = 11.0;
 
 #ifdef NERDOCTAXEGAMMA
     m_theme = new ThemeNerdoctaxegamma();
@@ -57,7 +57,7 @@ NerdOctaxeGamma::NerdOctaxeGamma()
         // TPS53667 configuration: 6 phases, 240A capability
         m_numPhases = 6;
         m_imax = 240; // Current hardware: 24.9kΩ → 240A max (40A per phase with 6 phases)
-        m_ifault = 300.0;
+        m_ifault = 350.0;
         m_maxPin = 350.0; // ~350W output Typically
         m_minPin = 30.0;
         m_minCurrentA = 0.0f;
