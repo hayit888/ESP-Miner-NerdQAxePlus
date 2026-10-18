@@ -15,8 +15,8 @@ TPS53667::TPS53667() : TPS53647()
     m_initVOutMin = 0.8f;
     m_initVOutMax = 2.5f;
     m_initOnOffConfig = 0b00010111;
-    m_initOtWarnLimit = 95.0f;
-    m_initOtFaultLimit = 125.0f;
+    m_initOtWarnLimit = 150.0f;
+    m_initOtFaultLimit = 175.0f;
 }
 
 void TPS53667::set_phases(int num_phases)
@@ -71,7 +71,7 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
 
     set_phases(num_phases);
 
-    write_word(PMBUS_VOUT_MAX, (uint16_t) volt_to_vid(m_initVOutMax)); // to do better ! 1.4V
+    write_word(PMBUS_VOUT_MAX, (uint16_t) volt_to_vid(m_initVOutMax)); // to do better ! 2.5V
     // write_byte(PMBUS_MFR_SPECIFIC_00, 0x06);                     // Per-Phase Overcurrent Limit 42A threshold
     write_byte(PMBUS_MFR_SPECIFIC_00, 0x07); // Per-Phase Overcurrent Limit 45A threshold
     // write_byte(PMBUS_MFR_SPECIFIC_16, 0x02);                     // threshold for the VIN Undervoltage UVLO 8.1V threshold
