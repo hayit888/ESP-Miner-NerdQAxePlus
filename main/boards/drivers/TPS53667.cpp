@@ -13,7 +13,7 @@ TPS53667::TPS53667() : TPS53647()
     // voltages below 1V are allowed (e.g. Q1373). Staying above 1.000V is no
     // longer needed here — set_vout() already skips VID 0x97 for reset detection.
     m_initVOutMin = 0.8f;
-    m_initVOutMax = 1.4f;
+    m_initVOutMax = 2.5f;
     m_initOnOffConfig = 0b00010111;
     m_initOtWarnLimit = 95.0f;
     m_initOtFaultLimit = 125.0f;
