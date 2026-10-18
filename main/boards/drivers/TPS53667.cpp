@@ -88,8 +88,8 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_word(PMBUS_IOUT_OC_FAULT_LIMIT, float_to_slinear11(ifault));
 
     // Iin current
-    write_word(PMBUS_IIN_OC_WARN_LIMIT, float_to_slinear11(25.0));  // about 300W input power
-    write_word(PMBUS_IIN_OC_FAULT_LIMIT, float_to_slinear11(28.0)); // about 336W input power
+    write_word(PMBUS_IIN_OC_WARN_LIMIT, float_to_slinear11(25.0));  // about 350W input power
+    write_word(PMBUS_IIN_OC_FAULT_LIMIT, float_to_slinear11(28.0)); // about 350W input power
 
     m_initialized = true;
 
