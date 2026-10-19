@@ -71,11 +71,9 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
 
     set_phases(num_phases);
 
-    write_word(PMBUS_VOUT_MAX, (uint16_t) volt_to_vid(m_initVOutMax)); // to do better ! 1.4V
-    // write_byte(PMBUS_MFR_SPECIFIC_00, 0x06);                     // Per-Phase Overcurrent Limit 42A threshold
-    write_byte(PMBUS_MFR_SPECIFIC_00, 0x07); // Per-Phase Overcurrent Limit 45A threshold
-    // write_byte(PMBUS_MFR_SPECIFIC_16, 0x02);                     // threshold for the VIN Undervoltage UVLO 8.1V threshold
-    write_byte(PMBUS_MFR_SPECIFIC_16, 0x01); // threshold for the VIN Undervoltage UVLO 6V threshold
+    write_word(PMBUS_VOUT_MAX, (uint16_t) volt_to_vid(1.55f)); 
+    write_byte(PMBUS_MFR_SPECIFIC_00, 0x07); 
+    write_byte(PMBUS_MFR_SPECIFIC_16, 0x01); 
     write_word(PMBUS_MFR_SPECIFIC_19, 0x0003);
 
     // temperature
@@ -84,12 +82,12 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
 
     // Iout current
     // set warn and fault to the same value
-    write_word(PMBUS_IOUT_OC_WARN_LIMIT, float_to_slinear11(ifault));
-    write_word(PMBUS_IOUT_OC_FAULT_LIMIT, float_to_slinear11(ifault));
+    write_word(PMBUS_IOUT_OC_WARN_LIMIT, float_to_slinear11(100.0f));
+    write_word(PMBUS_IOUT_OC_FAULT_LIMIT, float_to_slinear11(150.0f));
 
     // Iin current
-    write_word(PMBUS_IIN_OC_WARN_LIMIT, float_to_slinear11(25.0));  // about 300W input power
-    write_word(PMBUS_IIN_OC_FAULT_LIMIT, float_to_slinear11(28.0)); // about 336W input power
+    write_word(PMBUS_IIN_OC_WARN_LIMIT, float_to_slinear11(32.0f));  
+    write_word(PMBUS_IIN_OC_FAULT_LIMIT, float_to_slinear11(35.0f)); 
 
     m_initialized = true;
 
