@@ -71,10 +71,10 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
 
     set_phases(num_phases);
 
-    write_word(PMBUS_VOUT_MAX, (uint16_t) volt_to_vid(1.55f)); 
+    write_word(PMBUS_VOUT_MAX, (uint16_t) volt_to_vid(1.35f)); 
     write_byte(PMBUS_MFR_SPECIFIC_00, 0x07); 
     write_byte(PMBUS_MFR_SPECIFIC_16, 0x01); 
-    write_word(PMBUS_MFR_SPECIFIC_19, 0x0003);
+    write_word(PMBUS_MFR_SPECIFIC_19, 0x0007);
     write_byte(0x41, 0x00);
     write_byte(0x47, 0xBF);
     write_byte(0x45, 0x00);
