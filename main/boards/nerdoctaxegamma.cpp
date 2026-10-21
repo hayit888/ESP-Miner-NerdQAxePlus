@@ -61,7 +61,7 @@ NerdOctaxeGamma::NerdOctaxeGamma()
         m_maxPin = 350.0; // ~350W output Typically
         m_minPin = 30.0;
         m_minCurrentA = 0.0f;
-        m_maxCurrentA = 30.0f;
+        m_maxCurrentA = 35.0f;
         m_tps = new TPS53667();
 
         // Extended frequency range for TPS53667 (6 phases, higher power capacity)
