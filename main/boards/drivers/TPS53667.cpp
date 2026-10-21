@@ -76,7 +76,7 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_byte(PMBUS_MFR_SPECIFIC_16, 0x01); 
     write_word(PMBUS_MFR_SPECIFIC_19, 0x0007);
     write_byte(0x41, 0x00);
-    write_byte(0x47, 0xBF);
+    write_byte(0x47, 0x00);
     write_byte(0x45, 0x00);
 
     // temperature
