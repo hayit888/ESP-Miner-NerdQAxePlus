@@ -89,8 +89,8 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_word(PMBUS_IOUT_OC_FAULT_LIMIT, float_to_slinear11(180.0f));
 
     // Iin current
-    write_word(PMBUS_IIN_OC_WARN_LIMIT, float_to_slinear11(35.0f));  
-    write_word(PMBUS_IIN_OC_FAULT_LIMIT, float_to_slinear11(35.0f)); 
+    write_word(PMBUS_IIN_OC_WARN_LIMIT, float_to_slinear11(40.0f));  
+    write_word(PMBUS_IIN_OC_FAULT_LIMIT, float_to_slinear11(40.0f)); 
 
     m_initialized = true;
 
