@@ -135,12 +135,13 @@ void TPS53667::status()
               "TPS536X7_status  bytes: %02x, word: %04x, vout: %02x, iout: %02x, input: %02x, mfr_spec: %02x phase: %02x",
               status_byte, status_word, status_vout, status_iout, status_input, status_mfr_specific, status_phase);
 }
+
 // ====================================================================
-// 🔀 HACK: OVERRIDE READ METRICS (徹底欺騙 NerdOS 核心監控，移除 #4A505050 死鎖)
+// ➕ ADDED: HACK TO OVERRIDE TELEMETRY & STOP GURU MEDITATION #4A505050
 // ====================================================================
 bool TPS53667::read_word(uint8_t command, uint16_t *data)
 {
-    // 先調用父類別執行真實的 I2C 讀取，維持正常通訊
+    // 調用父類別執行真實的 I2C 讀取，維持正常通訊
     bool success = TPS53647::read_word(command, data);
     
     if (success && data) {
