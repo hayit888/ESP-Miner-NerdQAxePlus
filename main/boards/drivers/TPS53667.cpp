@@ -141,5 +141,4 @@ bool TPS53667::read_byte(uint8_t command, uint8_t *data)
     }
     return success;
 }
-
-  
+    
