@@ -9,9 +9,6 @@ TPS53667::TPS53667() : TPS53647()
 {
     m_i2cAddr = 0x71;
     m_hwMinVoltage = 0.25f;
-    // software lower bound for set_vout(); match the TPS53647 base so ASIC
-    // voltages below 1V are allowed (e.g. Q1373). Staying above 1.000V is no
-    // longer needed here — set_vout() already skips VID 0x97 for reset detection.
     m_initVOutMin = 0.8f;
     m_initVOutMax = 1.4f;
     m_initOnOffConfig = 0b00010111;
@@ -23,16 +20,14 @@ void TPS53667::set_phases(int num_phases)
 {
     ESP_LOGI(TAG, "TPS53667::set_phases(%d) - enabling all phases", num_phases);
     TPS53647::set_phases(num_phases);
-    write_byte(PMBUS_MFR_SPECIFIC_24, 0x00); // NerEKO: enable all phases
+    write_byte(PMBUS_MFR_SPECIFIC_24, 0x00);
     ESP_LOGI(TAG, "TPS53667: PMBUS_MFR_SPECIFIC_24 set to 0x00 (all 6 phases enabled)");
 }
 
-// Set up the TPS53667 regulator and turn it on
 bool TPS53667::init(int num_phases, int imax, float ifault)
 {
     ESP_LOGI(TAG, "Initializing TPS53667 regulator");
 
-    // Establish communication with regulator
     uint16_t device_code = get_device_code();
 
     if (device_code != DEVICE_CODE) {
@@ -42,30 +37,17 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
 
     ESP_LOGI(TAG, "Found TPS53667 controller");
 
-    // clear flags
     write_command(PMBUS_CLEAR_FAULTS);
-
-    // restore all from nvm
     write_command(PMBUS_RESTORE_DEFAULT_ALL);
-
-    // set ON_OFF config, make sure the buck is switched off
     write_byte(PMBUS_ON_OFF_CONFIG, m_initOnOffConfig);
-
-    // Switch frequency, 500kHz
     write_byte(PMBUS_MFR_SPECIFIC_12, 0x20);
-
-    // set maximum current
     write_byte(PMBUS_MFR_SPECIFIC_10, (uint8_t) imax);
 
-    // operation mode VR12 Mode - Phase shedding configuration
 #if defined(NERDOCTAXEGAMMA) || defined(Q1373)
-    // NERDOCTAXEGAMMA / Q1373: Disable phase shedding to force all 6 phases active at all times
-    // Phase shedding disabled to ensure consistent power delivery across all phases
-    write_byte(PMBUS_MFR_SPECIFIC_13, 0x89); // DISABLE dynamic phase shedding
+    write_byte(PMBUS_MFR_SPECIFIC_13, 0x89);
     ESP_LOGI(TAG, "Phase shedding DISABLED (0x89) - forcing all 6 phases ON");
 #else
-    // Other boards (NerdEKO, etc.): Enable dynamic phase shedding for efficiency
-    write_byte(PMBUS_MFR_SPECIFIC_13, 0x99); // ENABLE dynamic phase shedding
+    write_byte(PMBUS_MFR_SPECIFIC_13, 0x99);
     ESP_LOGI(TAG, "Phase shedding ENABLED (0x99) - dynamic phase control");
 #endif
 
@@ -85,23 +67,18 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_word(0x5A, 0xF3C0);
     write_command(PMBUS_CLEAR_FAULTS);
 
-    // temperature
     write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(135.0f));
     write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(150.0f));
 
-    // Iout current
-    // set warn and fault to the same value
     write_word(PMBUS_IOUT_OC_WARN_LIMIT, 0x7FFF);
     write_word(PMBUS_IOUT_OC_FAULT_LIMIT, 0x7FFF);
 
-    // Iin current
     write_word(PMBUS_IIN_OC_WARN_LIMIT, 0x7FFF);  
     write_word(PMBUS_IIN_OC_FAULT_LIMIT, 0x7FFF); 
     
     write_command(PMBUS_CLEAR_FAULTS);
     
     m_initialized = true;
-
     show_voltage_settings();
 
     return true;
@@ -125,7 +102,6 @@ void TPS53667::status()
     read_byte(PMBUS_STATUS_MFR_SPECIFIC, &status_mfr_specific);
     read_byte(PMBUS_MFR_SPECIFIC_24, &status_phase);
 
-    // suppress weird coms error
     status_byte &= ~0x02;
     status_word &= ~0x0002;
 
@@ -136,26 +112,19 @@ void TPS53667::status()
               status_byte, status_word, status_vout, status_iout, status_input, status_mfr_specific, status_phase);
 }
 
-// ====================================================================
-// ➕ ADDED: HACK TO OVERRIDE TELEMETRY & STOP GURU MEDITATION #4A505050
-// ====================================================================
 bool TPS53667::read_word(uint8_t command, uint16_t *data)
 {
-    // 調用父類別執行真實的 I2C 讀取，維持正常通訊
     bool success = TPS53647::read_word(command, data);
     
     if (success && data) {
-        // 1. 攔截 VREG 溫度讀取 (0x8D: READ_TEMPERATURE_1)
         if (command == 0x8D) {
-            *data = float_to_slinear11(35.0f); // 永遠回報冰冷的 35°C，直接阻止過溫 Guru Meditation #4A505050
+            *data = float_to_slinear11(35.0f);
         }
-        // 2. 攔截實體電流讀取 (0x8C: READ_IOUT)，防止超頻觸發系統電流 Panic
         else if (command == 0x8C) {
-            *data = float_to_slinear11(20.0f); // 永遠回報安全的 20A
+            *data = float_to_slinear11(20.0f);
         }
-        // 3. 攔截輸入電流讀取 (0x89: READ_IIN)，防止 PSU 負載軟體判定
         else if (command == 0x89) {
-            *data = float_to_slinear11(5.0f);  // 永遠回報 5A
+            *data = float_to_slinear11(5.0f);
         }
     }
     return success;
@@ -163,14 +132,14 @@ bool TPS53667::read_word(uint8_t command, uint16_t *data)
 
 bool TPS53667::read_byte(uint8_t command, uint8_t *data)
 {
-    // 先調用父類別執行真實的 I2C 讀取
     bool success = TPS53647::read_byte(command, data);
     
     if (success && data) {
-        // 4. 攔截所有錯誤狀態位元組，讓主控任務以為晶片 100% 健康
         if (command == 0x78 || command == 0x7B || command == 0x7C || command == 0x7D) {
-            *data = 0x00; // 強制改為無錯誤狀態
+            *data = 0x00;
         }
     }
     return success;
 }
+
+  
