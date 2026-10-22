@@ -97,7 +97,9 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     // Iin current
     write_word(PMBUS_IIN_OC_WARN_LIMIT, 0x7FFF);  
     write_word(PMBUS_IIN_OC_FAULT_LIMIT, 0x7FFF); 
-
+    
+    write_command(PMBUS_CLEAR_FAULTS);
+    
     m_initialized = true;
 
     show_voltage_settings();
