@@ -14,7 +14,4 @@ public:
     virtual bool init(int num_phases, int imax, float ifault);
 
     virtual void status();
-
-    bool read_word(uint8_t command, uint16_t *data);
-    bool read_byte(uint8_t command, uint8_t *data);
 };
