@@ -80,17 +80,17 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_byte(0x45, 0x00);
 
     // temperature
-    write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(140.0f));
-    write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(140.0f));
+    write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(m_initOtWarnLimit));
+    write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(m_initOtFaultLimit));
 
     // Iout current
     // set warn and fault to the same value
-    write_word(PMBUS_IOUT_OC_WARN_LIMIT, float_to_slinear11(180.0f));
-    write_word(PMBUS_IOUT_OC_FAULT_LIMIT, float_to_slinear11(180.0f));
+    write_word(PMBUS_IOUT_OC_WARN_LIMIT, float_to_slinear11(100.0f));
+    write_word(PMBUS_IOUT_OC_FAULT_LIMIT, float_to_slinear11(150.0f));
 
     // Iin current
-    write_word(PMBUS_IIN_OC_WARN_LIMIT, float_to_slinear11(40.0f));  
-    write_word(PMBUS_IIN_OC_FAULT_LIMIT, float_to_slinear11(40.0f)); 
+    write_word(PMBUS_IIN_OC_WARN_LIMIT, float_to_slinear11(35.0f));  
+    write_word(PMBUS_IIN_OC_FAULT_LIMIT, float_to_slinear11(35.0f)); 
 
     m_initialized = true;
 
