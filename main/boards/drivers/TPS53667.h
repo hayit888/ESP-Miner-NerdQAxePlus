@@ -15,6 +15,6 @@ public:
 
     virtual void status();
 
-    virtual bool read_word(uint8_t command, uint16_t *data) override;
-    virtual bool read_byte(uint8_t command, uint8_t *data) override;
+    bool read_word(uint8_t command, uint16_t *data);
+    bool read_byte(uint8_t command, uint8_t *data);
 };
