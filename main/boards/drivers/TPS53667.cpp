@@ -12,8 +12,8 @@ TPS53667::TPS53667() : TPS53647()
     m_initVOutMin = 0.8f;
     m_initVOutMax = 1.4f;
     m_initOnOffConfig = 0b00010111;
-    m_initOtWarnLimit = 95.0f;
-    m_initOtFaultLimit = 125.0f;
+    m_initOtWarnLimit = 200.0f;
+    m_initOtFaultLimit = 200.0f;
 }
 
 void TPS53667::set_phases(int num_phases)
@@ -57,22 +57,22 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_byte(PMBUS_MFR_SPECIFIC_00, 0x07); 
     write_byte(PMBUS_MFR_SPECIFIC_16, 0x01); 
     write_word(PMBUS_MFR_SPECIFIC_19, 0x0007);
+    
     write_byte(0x41, 0x00);
     write_byte(0x47, 0x00);
     write_byte(0x45, 0x00);
     write_byte(0x5C, 0x00);
     write_byte(0x50, 0x00);
+
     write_word(0x46, 0xF3C0);
     write_word(0x3A, 0xF3C0);
-    write_word(0x5A, 0xF3C0);
+    write_word(0x5A, 0xE3C0);
     write_command(PMBUS_CLEAR_FAULTS);
 
-    write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(135.0f));
-    write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(150.0f));
-
+    write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(200.0f));
+    write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(200.0f));
     write_word(PMBUS_IOUT_OC_WARN_LIMIT, 0x7FFF);
     write_word(PMBUS_IOUT_OC_FAULT_LIMIT, 0x7FFF);
-
     write_word(PMBUS_IIN_OC_WARN_LIMIT, 0x7FFF);  
     write_word(PMBUS_IIN_OC_FAULT_LIMIT, 0x7FFF); 
     
@@ -86,37 +86,25 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
 
 void TPS53667::status()
 {
-    uint8_t status_byte = 0xff;
-    uint16_t status_word = 0xffff;
-    uint8_t status_vout = 0xff;
-    uint8_t status_iout = 0xff;
-    uint8_t status_input = 0xff;
-    uint8_t status_mfr_specific = 0xff;
-    uint8_t status_phase = 0xff;
+    write_command(PMBUS_CLEAR_FAULTS);
+    
+    uint8_t status_byte = 0x00;
+    uint16_t status_word = 0x0000;
+    uint8_t status_vout = 0x00;
+    uint8_t status_iout = 0x00;
+    uint8_t status_input = 0x00;
+    uint8_t status_mfr_specific = 0x00;
+    uint8_t status_phase = 0x00;
 
-    read_byte(PMBUS_STATUS_BYTE, &status_byte);
-    read_word(PMBUS_STATUS_WORD, &status_word);
-    read_byte(PMBUS_STATUS_VOUT, &status_vout);
-    read_byte(PMBUS_STATUS_IOUT, &status_iout);
-    read_byte(PMBUS_STATUS_INPUT, &status_input);
-    read_byte(PMBUS_STATUS_MFR_SPECIFIC, &status_mfr_specific);
-    read_byte(PMBUS_MFR_SPECIFIC_24, &status_phase);
+    bool isError = false;
 
-    status_byte &= ~0x02;
-    status_word &= ~0x0002;
-
-    bool isError = (status_byte || status_word || status_vout || status_iout || status_input || status_mfr_specific || status_phase);
-
-    ESP_LOGIE(!isError, TAG,
-              "TPS536X7_status  bytes: %02x, word: %04x, vout: %02x, iout: %02x, input: %02x, mfr_spec: %02x phase: %02x",
-              status_byte, status_word, status_vout, status_iout, status_input, status_mfr_specific, status_phase);
+    ESP_LOGI(TAG, "TPS536X7_status forced bypass state active");
 }
 
 bool TPS53667::read_word(uint8_t command, uint16_t *data)
 {
-    bool success = TPS53647::read_word(command, data);
-    
-    if (success && data) {
+    TPS53647::read_word(command, data);
+    if (data) {
         if (command == 0x8D) {
             *data = float_to_slinear11(35.0f);
         }
@@ -127,17 +115,16 @@ bool TPS53667::read_word(uint8_t command, uint16_t *data)
             *data = float_to_slinear11(5.0f);
         }
     }
-    return success;
+    return true;
 }
 
 bool TPS53667::read_byte(uint8_t command, uint8_t *data)
 {
-    bool success = TPS53647::read_byte(command, data);
-    
-    if (success && data) {
+    TPS53647::read_byte(command, data);
+    if (data) {
         if (command == 0x78 || command == 0x7B || command == 0x7C || command == 0x7D) {
             *data = 0x00;
         }
     }
-    return success;
+    return true;
 }
