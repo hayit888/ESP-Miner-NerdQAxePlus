@@ -104,28 +104,32 @@ void TPS53667::status()
 
 bool TPS53667::read_word(uint8_t command, uint16_t *data)
 {
-    TPS53647::read_word(command, data);
     if (data) {
         if (command == 0x8D) { 
-            *data = float_to_slinear11(115.0f);
+            *data = 0x1A80;
+            return true;
         }
         else if (command == 0x8C) { 
-            *data = float_to_slinear11(20.0f);
+            *data = 0x00A0;
+            return true;
         }
         else if (command == 0x89) { 
-            *data = float_to_slinear11(5.0f);
+            *data = 0x00A0;
+            return true;
         }
     }
-    return true;
+    
+    return TPS53647::read_word(command, data);
 }
 
 bool TPS53667::read_byte(uint8_t command, uint8_t *data)
 {
-    TPS53647::read_byte(command, data);
     if (data) {
-        if (command == 0x78 || command == 0x7B || command == 0x7C || command == 0x7D) {
+        if (command == 0x78 || command == 0x79 || command == 0x7A || command == 0x7B || command == 0x7C || command == 0x7D) {
             *data = 0x00;
+            return true;
         }
     }
-    return true;
+    
+    return TPS53647::read_byte(command, data);
 }
