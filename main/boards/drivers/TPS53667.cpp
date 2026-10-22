@@ -79,6 +79,7 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_byte(0x47, 0x00);
     write_byte(0x45, 0x00);
     write_byte(0x5C, 0x00);
+    write_byte(0x50, 0x00);
     write_word(0x46, 0xF3C0);
     write_word(0x3A, 0xF3C0);
     write_word(0x5A, 0xF3C0);
