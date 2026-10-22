@@ -85,8 +85,8 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_command(PMBUS_CLEAR_FAULTS);
 
     // temperature
-    write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(m_initOtWarnLimit));
-    write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(m_initOtFaultLimit));
+    write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(135.0f));
+    write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(150.0f));
 
     // Iout current
     // set warn and fault to the same value
