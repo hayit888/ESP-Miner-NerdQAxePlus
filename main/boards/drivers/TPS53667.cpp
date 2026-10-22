@@ -12,8 +12,8 @@ TPS53667::TPS53667() : TPS53647()
     m_initVOutMin = 0.8f;
     m_initVOutMax = 1.4f;
     m_initOnOffConfig = 0b00010111;
-    m_initOtWarnLimit = 200.0f;
-    m_initOtFaultLimit = 200.0f;
+    m_initOtWarnLimit = 130.0f;
+    m_initOtFaultLimit = 140.0f;
 }
 
 void TPS53667::set_phases(int num_phases)
@@ -26,7 +26,7 @@ void TPS53667::set_phases(int num_phases)
 
 bool TPS53667::init(int num_phases, int imax, float ifault)
 {
-    ESP_LOGI(TAG, "Initializing TPS53667 regulator");
+    ESP_LOGI(TAG, "Initializing TPS53667 regulator - HYPER OVERCLOCK MODE");
 
     uint16_t device_code = get_device_code();
 
@@ -69,8 +69,9 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
     write_word(0x5A, 0xE3C0);
     write_command(PMBUS_CLEAR_FAULTS);
 
-    write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(200.0f));
-    write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(200.0f));
+    write_word(PMBUS_OT_WARN_LIMIT, float_to_slinear11(130.0f));
+    write_word(PMBUS_OT_FAULT_LIMIT, float_to_slinear11(140.0f));
+    
     write_word(PMBUS_IOUT_OC_WARN_LIMIT, 0x7FFF);
     write_word(PMBUS_IOUT_OC_FAULT_LIMIT, 0x7FFF);
     write_word(PMBUS_IIN_OC_WARN_LIMIT, 0x7FFF);  
@@ -98,20 +99,20 @@ void TPS53667::status()
 
     bool isError = false;
 
-    ESP_LOGI(TAG, "TPS536X7_status forced bypass state active");
+    ESP_LOGI(TAG, "TPS536X7_status forced bypass & autox wash active");
 }
 
 bool TPS53667::read_word(uint8_t command, uint16_t *data)
 {
     TPS53647::read_word(command, data);
     if (data) {
-        if (command == 0x8D) {
-            *data = float_to_slinear11(35.0f);
+        if (command == 0x8D) { 
+            *data = float_to_slinear11(115.0f);
         }
-        else if (command == 0x8C) {
+        else if (command == 0x8C) { 
             *data = float_to_slinear11(20.0f);
         }
-        else if (command == 0x89) {
+        else if (command == 0x89) { 
             *data = float_to_slinear11(5.0f);
         }
     }
