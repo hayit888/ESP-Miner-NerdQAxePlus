@@ -1,5 +1,4 @@
 #include <string.h>
-
 #include "esp_attr.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -276,4 +275,22 @@ extern "C" void app_main(void)
     const bool canSlave = board->isCanSlave();
 
     if (canSlave) {
-
+        can_slave_task_start();
+    } else {
+        if (board->isCanMaster()) {
+            can_master_task_start();
+        }
+        setup_network(board->hasEthernet());
+        STRATUM_MANAGER = newStratumManager();
+        if (STRATUM_MANAGER) {
+            STRATUM_MANAGER->start();
+        }
+        create_jobs_task_start();
+        asic_jobs_start();
+        asic_result_task_start();
+        apis_task_start();
+        ping_task_start();
+        hashrate_monitor_task_start();
+        influx_task_start();
+    }
+}
