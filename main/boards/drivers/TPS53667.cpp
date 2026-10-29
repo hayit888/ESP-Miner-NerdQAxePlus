@@ -88,18 +88,7 @@ bool TPS53667::init(int num_phases, int imax, float ifault)
 void TPS53667::status()
 {
     write_command(PMBUS_CLEAR_FAULTS);
-    
-    uint8_t status_byte = 0x00;
-    uint16_t status_word = 0x0000;
-    uint8_t status_vout = 0x00;
-    uint8_t status_iout = 0x00;
-    uint8_t status_input = 0x00;
-    uint8_t status_mfr_specific = 0x00;
-    uint8_t status_phase = 0x00;
-
-    bool isError = false;
-
-    ESP_LOGI(TAG, "TPS536X7_status forced bypass & autox wash active - ALL FAULTS IGNORED");
+    ESP_LOGI(TAG, "TPS536X7_status forced bypass - ALL FAULTS IGNORED");
 }
 
 bool TPS53667::read_word(uint8_t command, uint16_t *data)
@@ -109,24 +98,19 @@ bool TPS53667::read_word(uint8_t command, uint16_t *data)
             *data = 0x0000;
             return true;
         }
-        
         if (command == 0x8D) { 
             *data = 0x1A80;
             return true;
         }
-        else if (command == 0x8C) { 
-            *data = 0x00A0;
-            return true;
-        }
-        else if (command == 0x89) { 
+        if (command == 0x8C || command == 0x89) { 
             *data = 0x00A0;
             return true;
         }
     }
     
     bool ret = TPS53647::read_word(command, data);
-    if (command == 0x79 || command == 0x78) {
-        if (data) *data = 0x0000;
+    if ((command == 0x79 || command == 0x78) && data) {
+        *data = 0x0000;
     }
     return ret;
 }
@@ -134,10 +118,6 @@ bool TPS53667::read_word(uint8_t command, uint16_t *data)
 bool TPS53667::read_byte(uint8_t command, uint8_t *data)
 {
     if (data) {
-        if (command == 0x7A || command == 0x7B || command == 0x7C || command == 0x7D) {
-            *data = 0x00;
-            return true;
-        }
         if (command >= 0x78 && command <= 0x7D) {
             *data = 0x00;
             return true;
@@ -145,8 +125,8 @@ bool TPS53667::read_byte(uint8_t command, uint8_t *data)
     }
     
     bool ret = TPS53647::read_byte(command, data);
-    if (command >= 0x78 && command <= 0x7D) {
-        if (data) *data = 0x00;
+    if (command >= 0x78 && command <= 0x7D && data) {
+        *data = 0x00;
     }
     return ret;
 }
