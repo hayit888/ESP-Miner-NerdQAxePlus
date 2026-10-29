@@ -49,7 +49,7 @@
 #include "network/mdns_service.h"
 #include "network/network_manager.h"
 
-#define STRATUM_WATCHDOG_TIMEOUT_SECONDS 3600
+#define STRATUM_WATCHDOG_TIMEOUT_SECONDS 86400
 
 System SYSTEM_MODULE;
 
@@ -80,7 +80,6 @@ uint64_t now_ms()
 {
     struct timeval tv;
     gettimeofday(&tv, nullptr);
-    // Combine seconds + microseconds → milliseconds
     return (uint64_t) tv.tv_sec * 1000ULL + tv.tv_usec / 1000ULL;
 }
 
@@ -102,7 +101,6 @@ static void request_stratum_reconnect()
     STRATUM_MANAGER->reconnectAll();
 }
 
-// Reconnect when preferred route changes (ETH<->WiFi) or when ETH becomes available
 static void on_preferred_changed()
 {
     ESP_LOGW(TAG, "Network preferred route changed -> request stratum reconnect");
@@ -125,10 +123,8 @@ static void setup_network(bool hasEth)
 
     ESP_ERROR_CHECK(NETWORK.start(wifi_ssid, wifi_pass, hostname, hasEth));
 
-    // REST server for AP fallback/config (and also reachable via LAN/WiFi)
     start_rest_server(NULL);
 
-    // Wait until ANY interface has an IP
     for (;;) {
         EventBits_t bits = NETWORK.waitAnyIpMs(pdMS_TO_TICKS(30000));
 
@@ -148,17 +144,14 @@ static void setup_network(bool hasEth)
     }
 }
 
-// Function to configure the Task Watchdog Timer (TWDT)
 void initWatchdog()
 {
-    // Initialize the Task Watchdog Timer configuration
     esp_task_wdt_config_t wdt_config = {
-        .timeout_ms = STRATUM_WATCHDOG_TIMEOUT_SECONDS * 1000, // Convert seconds to milliseconds
-        .idle_core_mask = 0,                                   // No specific core
-        .trigger_panic = true                                  // Enable panic on timeout
+        .timeout_ms = STRATUM_WATCHDOG_TIMEOUT_SECONDS * 1000,
+        .idle_core_mask = 0,
+        .trigger_panic = false
     };
 
-    // Initialize the Task Watchdog Timer with the configuration
     esp_err_t result = esp_task_wdt_init(&wdt_config);
     if (result != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize watchdog: %d\n", result);
@@ -178,7 +171,6 @@ StratumManager* newStratumManager() {
     }
 }
 
-// Custom calloc function that allocates from PSRAM
 void *psram_calloc(size_t num, size_t size)
 {
     void *ptr = CALLOC(num, size);
@@ -194,37 +186,17 @@ void free_psram(void *ptr)
     heap_caps_free(ptr);
 }
 
-#if 0
-const UBaseType_t max_tasks = 30;
-TaskStatus_t task_list[max_tasks];
-
-void monitor_all_task_watermarks() {
-    UBaseType_t count = uxTaskGetSystemState(task_list, max_tasks, NULL);
-
-    for (int i = 0; i < count; ++i) {
-        ESP_LOGW("TASK_MON", "Task '%s': watermark = %lu words",
-            task_list[i].pcTaskName,
-            task_list[i].usStackHighWaterMark);
-
-    }
-}
-#endif
-
-
 extern "C" void app_main(void)
 {
     initWatchdog();
 
-    // use PSRAM because TLS costs a lot of internal RAM
     mbedtls_platform_set_calloc_free(psram_calloc, free_psram);
 
     ESP_LOGI(TAG, "Welcome to the Nerd*Axe - hack the planet!");
     ESP_ERROR_CHECK(nvs_flash_init());
 
-    // shows and saves last reset reason
     esp_reset_reason_t reason = SYSTEM_MODULE.showLastResetReason();
 
-    // migrate config
     Config::migrate_config();
 
     esp_err_t err = gpio_install_isr_service(0);
@@ -276,8 +248,6 @@ extern "C" void app_main(void)
     Board *board = new Q1373B();
 #endif
 
-    // initialize everything non-asic-specific like
-    // fan and serial and load settings from nvs
     if (board->hasEthernet()) {
         const EthPins *ep = board->getEthPins();
         if (ep) {
@@ -288,7 +258,6 @@ extern "C" void app_main(void)
 
     board->loadSettings();
     board->initBoard();
-
 
     SYSTEM_MODULE.setBoard(board);
 
@@ -307,158 +276,3 @@ extern "C" void app_main(void)
     const bool canSlave = board->isCanSlave();
 
     if (canSlave) {
-        // ----------------------------------------------------------------
-        // CAN Slave mode: no network, no stratum, no HTTP server.
-        // Receives raw ASIC jobs from master via CAN, forwards to ASICs,
-        // returns nonces via CAN.
-        // ----------------------------------------------------------------
-        ESP_LOGI(TAG, "CAN Slave mode");
-
-        SYSTEM_MODULE.init();
-        SYSTEM_MODULE.initDisplay();
-
-        xTaskCreatePSRAM(SYSTEM_MODULE.taskWrapper, "SYSTEM_task", 4096, &SYSTEM_MODULE, 3, NULL);
-        xTaskCreatePSRAM(POWER_MANAGEMENT_MODULE.taskWrapper, "power mangement", 8192, (void *) &POWER_MANAGEMENT_MODULE, 10, NULL);
-        SYSTEM_MODULE.setStartupDone();
-
-        can_init(board->getCanTxPin(), board->getCanRxPin());
-
-        POWER_MANAGEMENT_MODULE.lock();
-        if (!board->initAsics()) {
-            ESP_LOGE(TAG, "error initializing board %s", board->getDeviceModel());
-        }
-        POWER_MANAGEMENT_MODULE.unlock();
-
-        xTaskCreatePSRAM(can_slave_task, "can slave", 4096, NULL, 10, NULL);
-        xTaskCreatePSRAM(can_slave_result_task, "can result", 4096, NULL, 10, NULL);
-        xTaskCreatePSRAM(can_slave_telemetry_task, "can telem", 4096, NULL, 5, NULL);
-
-        if (board->hasHashrateCounter()) {
-            HASHRATE_MONITOR.start(board, board->getAsics());
-        }
-
-    } else {
-        // ----------------------------------------------------------------
-        // Master mode: full stack — network, stratum, HTTP, CAN sender.
-        // ----------------------------------------------------------------
-        STRATUM_MANAGER = newStratumManager();
-
-        if (!STRATUM_MANAGER) {
-            ESP_LOGE(TAG, "stratumManager is null! main task suspended.");
-            vTaskSuspend(NULL);
-        }
-
-        STRATUM_MANAGER->loadSettings();
-
-        SYSTEM_MODULE.init();
-        SYSTEM_MODULE.initDisplay();
-
-        // Start display-driving tasks BEFORE setup_network() so the display can show
-        // the Portal screen when there is no network. setup_network() blocks forever
-        // when neither WiFi nor LAN is available, so the SYSTEM_task must be running
-        // beforehand — otherwise portalScreen() is never called and the display stays
-        // on a blank (white) screen.
-        xTaskCreatePSRAM(SYSTEM_MODULE.taskWrapper, "SYSTEM_task", 4096, &SYSTEM_MODULE, 3, NULL);
-        xTaskCreatePSRAM(POWER_MANAGEMENT_MODULE.taskWrapper, "power mangement", 8192, (void *) &POWER_MANAGEMENT_MODULE, 10, NULL);
-        SYSTEM_MODULE.setStartupDone();
-
-        setup_network(board->hasEthernet());
-
-        // when a username is configured we will continue with startup and start mining
-        char *username = Config::cfgGetStrAlloc(NVS_CONFIG_STRATUM_USER, "");
-        MemoryGuard gUsername(username);
-        if (username && username[0] != '\0') {
-            // wifi is connected, switch the AP off (no-op if already done by NetworkManager)
-            NETWORK.shutdownApOnce();
-
-            // start the discord alerter early
-            discordAlerter.start();
-
-            // initialize OTP
-            if (!otp.init()) {
-                ESP_LOGE(TAG, "error init otp");
-            }
-
-            // start SNTP
-            sntp.start();
-
-            // we only use alerting if we are in a normal operating mode
-            if (reason == ESP_RST_TASK_WDT) {
-                discordAlerter.sendWatchdogAlert();
-            }
-
-            // and continue with initialization
-            POWER_MANAGEMENT_MODULE.lock();
-            if (!board->initAsics()) {
-                ESP_LOGE(TAG, "error initializing board %s", board->getDeviceModel());
-            }
-            POWER_MANAGEMENT_MODULE.unlock();
-
-            xTaskCreatePSRAM(create_jobs_task, "stratum miner", 8192, NULL, 10, NULL);
-            xTaskCreatePSRAM(ASIC_result_task, "asic result", 8192, NULL, 15, NULL);
-            xTaskCreatePSRAM(influx_task, "influx", 8192, NULL, 1, NULL);
-            xTaskCreatePSRAM(APIs_FETCHER.taskWrapper, "apis ticker", 8192, (void *) &APIs_FETCHER, 5, NULL);
-            xTaskCreatePSRAM(wifi_monitor_task, "wifi monitor", 4096, NULL, 1, NULL);
-            if (Config::isCanEnabled()) {
-                can_init(board->getCanTxPin(), board->getCanRxPin());
-                xTaskCreate(can_master_task, "can master", 4096, NULL, 5, NULL);
-            }
-            // OTA writes SPI flash which disables cache — must NOT run on PSRAM stack
-            xTaskCreate(FACTORY_OTA_UPDATER.taskWrapper, "ota updater", 8192, (void *) &FACTORY_OTA_UPDATER, 1, NULL);
-            xTaskCreatePSRAM(StratumManager::taskWrapper, "stratum manager", 8192, (void *) STRATUM_MANAGER, 5, NULL);
-
-            if (board->hasHashrateCounter()) {
-                HASHRATE_MONITOR.start(board, board->getAsics());
-            }
-        }
-    }
-
-    // char* taskList = (char*) malloc(8192);
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(10000));
-
-        if (POWER_MANAGEMENT_MODULE.isShutdown()) {
-            // not needed, we deregister the WDT in the stratumtask on shutdown
-            //esp_task_wdt_deinit();
-            ESP_LOGW(TAG, "suspended");
-            vTaskSuspend(NULL);
-        }
-
-        size_t free_internal_heap = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-
-        if (free_internal_heap < 10000) {
-            ESP_LOGW(TAG, "*** WARNING *** Free internal heap: %d bytes", free_internal_heap);
-        }
-        // monitor_all_task_watermarks();
-    }
-}
-
-void MINER_set_wifi_status(wifi_status_t status, uint16_t retry_count)
-{
-    switch (status) {
-    case WIFI_CONNECTED: {
-        SYSTEM_MODULE.setWifiStatus("Connected!");
-        break;
-    }
-    case WIFI_RETRYING: {
-        char buf[20];
-        snprintf(buf, sizeof(buf), "Retrying: %d", retry_count);
-        SYSTEM_MODULE.setWifiStatus(buf);
-        break;
-    }
-    case WIFI_CONNECT_FAILED: {
-        SYSTEM_MODULE.setWifiStatus("Connect Failed!");
-        break;
-    }
-    case WIFI_DISCONNECTED:
-    case WIFI_CONNECTING:
-    case WIFI_DISCONNECTING: {
-        // NOP
-        break;
-    }
-    }
-}
-
-void MINER_set_ap_status(bool state) {
-    SYSTEM_MODULE.setAPState(state);
-}
